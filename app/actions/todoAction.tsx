@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export type Todo = {
   _id: string;
   title: string;
@@ -9,41 +11,55 @@ export type NewTodo = Omit<Todo, "_id">;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+// Create axios instance with baseURL and token header
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Automatically attach token to all requests
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+
+  if (token) {
+    // Ensure headers exist before adding Authorization
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 export const fetchTodos = async (): Promise<Todo[]> => {
-  const response = await fetch(`${API_BASE_URL}/todos`);
-  if (!response.ok) throw new Error("Failed to fetch todos");
-  return response.json();
+  try {
+    const response = await axiosInstance.get<Todo[]>('/todos');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch todos');
+  }
 };
 
 export const addTodo = async (todo: NewTodo): Promise<Todo> => {
-  const response = await fetch(`${API_BASE_URL}/todos`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(todo),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to add todo");
+  try {
+    const response = await axiosInstance.post<Todo>('/todos', todo);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to add todo');
   }
-
-  return response.json();
 };
 
 export const toggleTodo = async (id: string): Promise<Todo> => {
-  const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) throw new Error("Failed to update todo");
-  return response.json();
+  try {
+    const response = await axiosInstance.put<Todo>(`/todos/${id}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to update todo');
+  }
 };
 
 export const deleteTodo = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) throw new Error("Failed to delete todo");
+  try {
+    await axiosInstance.delete(`/todos/${id}`);
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to delete todo');
+  }
 };
