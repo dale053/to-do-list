@@ -5,6 +5,7 @@ export type Todo = {
   title: string;
   desc: string;
   state: boolean;
+  deadline?: string; 
 };
 
 export type NewTodo = Omit<Todo, "_id">;
