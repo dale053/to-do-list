@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchTodos, addTodo, toggleTodo, deleteTodo, Todo, NewTodo } from '../actions/todoAction';
+import { fetchTodos, addTodo, toggleTodo, deleteTodo, Todo, NewTodo, updateTodo } from '../actions/todoAction';
 import TodoForm from '../components/TodoForm';
 import TodoList from '../components/TodoList';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Home() {
   const [todo, setTodo] = useState<NewTodo>({ title: '', desc: '', state: false, deadline: '' });
@@ -13,6 +14,11 @@ export default function Home() {
   const [titleError, setTitleError] = useState<string | null>(null);
   const [descError, setDescError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+  });
 
   const router = useRouter();
 
@@ -63,23 +69,53 @@ export default function Home() {
     }
   };
 
-  const handleToggleTodo = async (id: string) => {
-    try {
-      const updated = await toggleTodo(id);
-      setList(list.map(todo => (todo._id === id ? updated : todo)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update todo');
-    }
+  const handleToggleTodo = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: 'Are you sure you want to mark this todo as done?',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          const updated = await toggleTodo(id);
+          setList(list.map(todo => (todo._id === id ? updated : todo)));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to update todo');
+        }
+      },
+    });
   };
 
-  const handleDeleteTodo = async (id: string) => {
-    try {
-      await deleteTodo(id);
-      setList(list.filter(todo => todo._id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete todo');
-    }
+  const handleDeleteTodo = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: 'Are you sure you want to delete this todo?',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          await deleteTodo(id);
+          setList(list.filter(todo => todo._id !== id));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to delete todo');
+        }
+      },
+    });
   };
+
+  const handleUpdateTodo = async (id: string, updated: Partial<Todo>) => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const updatedTodo = await updateTodo(id, updated);
+    setList(prev =>
+      prev.map(todo => (todo._id === id ? updatedTodo : todo))
+    );
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to update todo');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -118,9 +154,17 @@ export default function Home() {
             loading={loading}
             onToggle={handleToggleTodo}
             onDelete={handleDeleteTodo}
+            onUpdate={handleUpdateTodo}
           />
         </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+      />
     </div>
   );
 }

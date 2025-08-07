@@ -64,3 +64,12 @@ export const deleteTodo = async (id: string): Promise<void> => {
     throw new Error(error.response?.data?.message || 'Failed to delete todo');
   }
 };
+
+export const updateTodo = async (id: string, data: Partial<Todo>): Promise<Todo> => {
+  try {
+    const response = await axiosInstance.put<Todo>(`/todos/update/${id}`, data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to update todo');
+  }
+};
