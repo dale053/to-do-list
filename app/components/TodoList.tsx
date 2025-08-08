@@ -153,7 +153,9 @@ const TodoList: React.FC<TodoListProps> = ({ todos, loading, onToggle, onDelete,
                         </button>
                       </div>
                       <button
-                        onClick={() => handleEdit(item)}
+                        onClick={() => {
+                          if(!item.state) handleEdit(item);
+                        }}
                         className="mt-1 px-3 py-0.5 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded"
                       >
                         Edit
